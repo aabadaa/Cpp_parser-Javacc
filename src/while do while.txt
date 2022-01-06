@@ -1,0 +1,33 @@
+/*
+
+int d;
+int a,b;
+d= 0;
+
+while(d>0){
+   d = d-1;
+   break;
+}
+*/
+
+/*
+int i;
+for(i = 0; i < 4 ; i = i +1){}
+
+*/
+int y=3 ;
+
+bool x = 3+1-y >3+2;
+
+string a = "hello"+"world";
+a = a+1,a = a + true;
+a = a + y;
+char c = 'c';
+a = a+c;
+cout<<endl<<"Start printing"<<endl;
+cout<<x<<endl;
+cout<<a;
+
+double d = 1;
+d= d+y;
+cout<<d;

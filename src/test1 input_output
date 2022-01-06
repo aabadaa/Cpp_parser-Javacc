@@ -1,0 +1,38 @@
+/*
+int input;
+cout<<endl<<"Enter Number Please ";
+cin>>input;
+cout<<"the value of input is "<<input+15<<endl;
+*/
+/*
+cout<<"Hello from comment";
+*/
+int x =5*6+9/2,y=15,z;
+y +=5 ,z=3+2;
+//y=100;
+
+cout<<"the value of x is "<<x<<endl;
+cout<<"the value of y is "<<y<<endl;
+cout<<"the value of z is "<<z<<endl;
+
+
+x = 'a';
+cout<<"the value of x is "<<x<<endl;
+
+double d = 3.8;
+cout<<"the value of d is "<<d<<endl;
+
+
+string st = "compiler"+" project";
+cout<<"the value of st is "<<st<<endl;
+
+
+char c = 'a';
+cout<<"the value of c is "<<c<<endl;
+
+bool b = false,bb=true;
+cout<<"the value of b is "<<b<<endl;
+
+
+if(bb && !b )
+	cout<<"Hello form if"<<endl;

@@ -1,0 +1,33 @@
+char c;
+cout<<"Enter char ";
+cin>>c;
+
+switch(c){
+	case 'a':
+	{
+		cout<<c<<endl;
+		break;
+	}
+	case 'b':
+	{
+		double a = 0.9;
+		cout<<"Enter a number ";
+		cin>>a;
+		cout<<a<<endl;
+	}
+	default:
+		int z = 1;
+		while(z<32){
+			z = z *2;
+		}
+	case '0':
+	case '1':
+		double b = 1.2;
+		b = b*0.9;
+		cout<<b;
+		break;
+	case '2':	
+		for(int k=100;k>10;k = k-10){
+			cout<<"case 9 is executed"<<endl;
+		}
+}

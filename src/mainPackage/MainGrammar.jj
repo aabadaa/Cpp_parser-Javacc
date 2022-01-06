@@ -1,0 +1,927 @@
+options
+{
+}
+
+PARSER_BEGIN(MainGrammar)
+package mainPackage;
+import NodePackage.*;
+import priority.*;
+import utils.*;
+
+public class MainGrammar
+{
+  public static void main(String args []) throws ParseException, java.io.FileNotFoundException
+  {
+    MainGrammar parser = new MainGrammar(
+    new java.io.FileInputStream("src/test2 switch")
+    );
+    AbstractTreeNode n = start();
+    TreePrinter.print(n);
+    if (n.execute(new Context()) instanceof JumpStmt) 
+    throw new RuntimeException("encountered jump statement outside loops or switch");
+    // printer.print();
+  }
+
+  static int space = 0;
+
+  public static void print(String x)
+  {
+    String out = "";
+    for (int i = 0; i < space; i++) 
+    out += " ";
+    System.out.println(out + x);
+  }
+
+  public static void inc()
+  {
+    space += 3;
+  }
+
+  public static void dec()
+  {
+    space -= 3;
+  }
+}
+
+PARSER_END(MainGrammar)
+
+SKIP :
+{
+  < " "
+  | "\t"
+  | "\r"
+  | "\n"
+  | "\r\n" >
+| < "//" (~[ "\n", "\r" ])*
+    (
+      "\n"
+    | "\r"
+    | "\r\n"
+    ) >
+}
+
+SKIP :
+{
+  < "//" (~[ "\r", "\n" ])* >
+| < "/*" > : ML_COMMENT_STATE
+}
+
+< ML_COMMENT_STATE >
+SKIP :
+{
+  < "*/" > : DEFAULT
+| < ~[ ] >
+}
+
+TOKEN :
+{
+  < DOUBLE_VALUE :
+    ([ "0"-"9" ])+
+    (
+      "." ([ "0"-"9" ])+
+    )?
+    (
+      (
+        "e"
+      | "E"
+      )
+      (
+        "+"
+      | "-"
+      )?
+      ([ "0"-"9" ])+
+    )? >
+| < BOOLEAN_VALUE :
+    "true"
+  | "false" >
+| < STR : "\"" (~[ "\"" ])* "\"" >
+| < INT_VALUE : ([ "0"-"9" ])+ >
+| < CHAR_VALUE : "\'" (~[ ]) "\'" >
+  //binary operators
+| < PLUS : "+" >
+| < MINUS : "-" >
+| < Mulp : "*" >
+| < DIV : "/" >
+| < MOD : "%" >
+  //equal operators
+| < Assignment :
+    "="
+  | "+="
+  | "-="
+  | "*="
+  | "/="
+  | "%=" >
+  //logical operators
+| < AND : "&&" >
+| < OR : "||" >
+| < NOT : "!" >
+  //unary operators
+| < pp : "++" >
+| < mm : "--" >
+  //keywords
+| < If : "if" >
+| < FOR : "for" >
+| < WHILE : "while" >
+| < DO : "do" >
+| < SWITCH : "switch" >
+| < CASE : "case" >
+| < DEF : "default" >
+| < BREAK : "break" >
+| < CONTINUE : "continue" >
+| < Else : "else" >
+  //symbols
+| < Semicolon : ";" >
+| < TP : ":" >
+| < COMA : "," >
+| < LeftParenthesis : "(" >
+| < RightParenthesis : ")" >
+| < LeftBrace : "{" >
+| < RightBrace : "}" >
+| < Compare :
+    ">"
+  | "<"
+  | "<="
+  | ">="
+  | "!="
+  | "==" >
+  //input output
+| < CIN : "cin" >
+| < COUT : "cout" >
+| < INPUTBRACE : ">>" >
+| < OUTPUTBRACE : "<<" >
+| < ENDLINE : "endl" >
+  //others
+| < Id : [ "a"-"z", "A"-"Z" ] ([ "a"-"z", "A"-"Z", "0"-"9" ])* >
+}
+
+BlockNode start() :
+{
+  BlockNode n = new BlockNode();
+  AbstractTreeNode c;
+}
+{
+  {
+    print("Start");
+  }
+  (
+    c = stmt()
+    {
+      n.addChild(c);
+    }
+  )+
+  < EOF >
+  {
+    System.out.println("Tree was built successfully!");
+    print("end");
+    return n;
+  }
+}
+
+AbstractTreeNode stmt() :
+{
+  AbstractTreeNode n;
+}
+{
+  {
+    inc();
+    print("start stmt");
+  }
+  (
+    LOOKAHEAD(2)
+    (
+      n = assignSequence() < Semicolon >
+    )
+  |
+    (
+      n = declarationStmt() < Semicolon >
+    )
+  | n = ifStmt()
+  | n = whileStmt()
+  | n = doWhileStmt()
+  | n = switchStmt()
+  | n = jumpStmt()
+  | n = forStmt()
+  | n = CinStmt()
+  | n = CoutStmt()
+  )
+  {
+    print("end stmt");
+    dec();
+    return n;
+  }
+}
+
+BlockNode block() :
+{
+  BlockNode res = new BlockNode();
+  AbstractTreeNode statement;
+}
+{
+  {
+    print("start block");
+  }
+  (
+    (
+      < LeftBrace >
+      (
+        statement = stmt()
+        {
+          res.addChild(statement);
+        }
+      )*
+      < RightBrace >
+    )
+  | statement = stmt()
+    {
+      res.addChild(statement);
+    }
+  )
+  {
+    print("end block");
+    return res;
+  }
+}
+
+CoutNode CoutStmt() :
+{
+  CoutNode res = new CoutNode();
+  AbstractTreeNode output = null;
+}
+{
+  {
+    print("start CoutStmt");
+    inc();
+  }
+  (
+    < COUT >
+    (
+      < OUTPUTBRACE >
+      (
+        output = expression()
+      | < ENDLINE >
+        {
+          output = new EndlNode();
+        }
+      )
+      {
+        res.addChild(output);
+      }
+    )+
+    < Semicolon >
+  )
+  {
+    print("end CoutStmt");
+    dec();
+    return res;
+  }
+}
+
+CinNode CinStmt() :
+{
+  CinNode res = new CinNode();
+  Token t;
+}
+{
+  {
+    print("start CinStmt");
+    inc();
+  }
+  (
+    < CIN >
+    (
+      < INPUTBRACE > t = < Id >
+      {
+        res.vars.add(t.image);
+      }
+    )+
+    < Semicolon >
+  )
+  {
+    print("end CinStmt");
+    dec();
+    return res;
+  }
+}
+
+IfNode ifStmt() :
+{
+  IfNode res = new IfNode();
+  AbstractTreeNode n, nn;
+}
+{
+  {
+    print("start ifStmt");
+    inc();
+  }
+  (
+    (
+      < If > < LeftParenthesis > n = expression() < RightParenthesis > nn = block()
+    )
+    {
+      res.addChild(n);
+      res.addChild(nn);
+    }
+    (
+      < Else > nn = block()
+      {
+        res.addChild(nn);
+      }
+    )?
+  )
+  {
+    print("end ifStmt");
+    dec();
+    return res;
+  }
+}
+
+WhileNode whileStmt() :
+{
+  WhileNode res = new WhileNode();
+  AbstractTreeNode cond, bl;
+}
+{
+  {
+    inc();
+    print("start whileStmt");
+  }
+  < WHILE > < LeftParenthesis > cond = expression() < RightParenthesis > bl = block()
+  {
+    res.addChild(cond);
+    res.addChild(bl);
+    print("end whileStmt");
+    dec();
+    return res;
+  }
+}
+
+DoWhileNode doWhileStmt() :
+{
+  DoWhileNode res = new DoWhileNode();
+  AbstractTreeNode cond, block;
+}
+{
+  {
+    inc();
+    print("start doWhileStmt");
+  }
+  < DO > block = block() < WHILE > < LeftParenthesis > cond = expression() < RightParenthesis > < Semicolon >
+  {
+    res.addChild(block);
+    res.addChild(cond);
+    print("end doWhileStmt");
+    dec();
+    return res;
+  }
+}
+
+ForNode forStmt() :
+{
+  ForNode res = new ForNode();
+  AbstractTreeNode cond = null, bl, ass1 = null, ass2 = null;
+}
+{
+  {
+    inc();
+    print("start forStmt");
+  }
+  (
+    < FOR > < LeftParenthesis >
+    (
+      LOOKAHEAD(2)
+      (
+        ass1 = assignSequence()
+      )
+    | ass1 = declarationStmt()
+    )?
+    < Semicolon >
+    (
+      cond = expression()
+    )?
+    < Semicolon >
+    (
+      ass2 = assignSequence()
+    )?
+    < RightParenthesis > 
+    bl = block()
+  )
+  {
+    if (ass1 == null) 
+    ass1 = new EmptyNode();
+    if (cond == null) 
+    cond = new EmptyNode();
+    if (ass2 == null) 
+    ass2 = new EmptyNode();
+    res.addChild(ass1);
+    res.addChild(cond);
+    res.addChild(ass2);
+    res.addChild(bl);
+    print("end forStmt");
+    dec();
+    return res;
+  }
+}
+
+BlockNode blockwithout() :
+{
+  BlockNode res = new BlockNode();
+  AbstractTreeNode statement;
+}
+{
+  {
+    print("start blockwithout");
+    inc();
+  }
+  (
+    (
+      statement = stmt()
+      {
+        res.addChild(statement);
+      }
+    )+
+  |
+    (
+      < LeftBrace >
+      (
+        statement = stmt()
+        {
+          res.addChild(statement);
+        }
+      )*
+      < RightBrace >
+    )
+  )
+  {
+    print("end blockwithout");
+    dec();
+    return res;
+  }
+}
+
+SwitchNode switchStmt() :
+{
+  SwitchNode res = new SwitchNode();
+  AbstractTreeNode ns, nns, nnns;
+}
+{
+  {
+    print("start switchStmt");
+    inc();
+    nns = new CaseNode();
+    nnns = new DefaultNode();
+  }
+  < SWITCH > < LeftParenthesis > ns = expression() < RightParenthesis > < LeftBrace >
+  {
+    res.addChild(ns);
+  }
+  (
+    (
+      nns = caseStmt()
+      {
+        res.addChild(nns);
+      }
+    )*
+    (
+      nnns = defaultStmt()
+      {
+        res.addChild(nnns);
+      }
+    )?
+    (
+      nns = caseStmt()
+      {
+        res.addChild(nns);
+      }
+    )*
+  )
+  < RightBrace >
+  {
+    print("end switchStmt");
+    dec();
+    return res;
+  }
+}
+
+CaseNode caseStmt() :
+{
+  CaseNode res = new CaseNode();
+  AbstractTreeNode nc, nnc;
+  nc = null;
+  nnc = null;
+}
+{
+  {
+    print("start caseStmt");
+    inc();
+  }
+  < CASE > nc = expression() < TP >
+  {
+    res.addChild(nc);
+  }
+  (
+    nnc = blockwithout()
+  )?
+  {
+    res.addChild(nnc);
+    print("end caseStmt");
+    dec();
+    return res;
+  }
+}
+
+DefaultNode defaultStmt() :
+{
+  DefaultNode res = new DefaultNode();
+  AbstractTreeNode nd;
+  nd = null;
+}
+{
+  {
+    print("start defaultStmt");
+    inc();
+  }
+  (
+    < DEF > < TP > nd = blockwithout()
+    {
+      res.addChild(nd);
+    }
+  )
+  {
+    print("end defaultStmt");
+    dec();
+    return res;
+  }
+}
+
+JumpStmtNode jumpStmt() :
+{
+  Token t = null;
+}
+{
+  {
+    inc();
+    print("start jumpStmt");
+  }
+  (
+    (
+      t = < BREAK >
+    | t = < CONTINUE >
+    )
+    < Semicolon >
+  )
+  {
+    JumpStmtNode out = new JumpStmtNode(JumpStmt.valueOf(t.image.toUpperCase()));
+    print("end jumpStmt");
+    dec();
+    return out;
+  }
+}
+
+BlockNode assignSequence() :
+{
+  BlockNode block = new BlockNode();
+  AssignNode assign = null;
+}
+{
+  {
+    inc();
+    print("start assignSequence");
+  }
+  assign = assignStmt()
+  {
+    block.addChild(assign);
+  }
+  (
+    < COMA > 
+    assign = assignStmt()
+    {
+      block.addChild(assign);
+    }
+  )*
+  {
+    print("end assignSequence");
+    dec();
+    return block;
+  }
+}
+
+AssignNode assignStmt() :
+{
+  Token t, op;
+  AssignNode anode = new AssignNode();
+  AbstractTreeNode n;
+}
+{
+  {
+    inc();
+    print("start assignStmt");
+  }
+  t = < Id > op = < Assignment > n = expression()
+  {
+    anode.setVar(t.image);
+    anode.setOperator(op.image);
+    anode.addChild(n);
+    print("end assignStmt");
+    dec();
+    return anode;
+  }
+}
+
+ConstantNode constant() :
+{
+  ConstantNode cn = null;
+}
+{
+  (
+    cn = strConstant()
+  | cn = charConstant()
+  | cn = doubleConstant()
+  | cn = boolConstant()
+  )
+  {
+    return cn;
+  }
+}
+
+ConstantNode doubleConstant() :
+{
+  Token t1;
+  ConstantNode cn = new ConstantNode();
+}
+{
+  (t1 = < DOUBLE_VALUE >)
+  {
+    print("constant double ");
+    cn.setValue(new Value("double", Double.parseDouble(t1.image)));
+    return cn;
+  }
+}
+
+ConstantNode charConstant() :
+{
+  Token t1;
+  ConstantNode cn = new ConstantNode();
+}
+{
+  (t1 = < CHAR_VALUE >)
+  {
+    print("constant char ");
+    cn.setValue(new Value("char", t1.image.charAt(1)));
+    return cn;
+  }
+}
+
+ConstantNode boolConstant() :
+{
+  Token t1;
+  ConstantNode cn = new ConstantNode();
+}
+{
+  (t1 = < BOOLEAN_VALUE >)
+  {
+    print("constant bool");
+    cn.setValue(new Value("bool", t1.image.equals("true")));
+    return cn;
+  }
+}
+
+ConstantNode strConstant() :
+{
+  Token t1;
+  ConstantNode cn = new ConstantNode();
+}
+{
+  (t1 = < STR >)
+  {
+    int start = 1, end = t1.image.length() - 1;
+    String value = t1.image.substring(start, end);
+    print("constant string ");
+    cn.setValue(new Value("string", value));
+    return cn;
+  }
+}
+
+VariableNode var() :
+{
+  Token t1;
+}
+{
+  (
+  t1 = < Id >
+  )
+  {
+    VariableNode cn = new VariableNode();
+    cn.setValue(t1.image);
+    print("variableNode node " + t1.image);
+    return cn;
+  }
+}
+
+AbstractTreeNode zero_priority() :
+{
+  AbstractTreeNode res;
+  UnaryNode unary = null;
+  Token t;
+}
+{
+  (
+    (
+      t = < MINUS >
+    | t = < PLUS >
+    | t = < NOT >
+    )
+    {
+      unary = new UnaryNode();
+      unary.setOperator(t.image);
+    }
+  )?
+  (
+    res = constant()
+  | 
+    res = var()
+  )
+  {
+    if (unary != null) 
+    unary.addChild(res);
+    return unary == null ? res : unary;
+  }
+}
+
+AbstractTreeNode expression() :
+{
+  AbstractTreeNode op1 = null, op2 = null;
+  LogicalNode logical = new LogicalNode();
+  Token t = null;
+}
+{
+  {
+    inc();
+    print("expression start");
+  }
+  (
+    op1 = third_priority()
+    {
+      logical.addChild(op1);
+    }
+    (
+      (
+        t = < AND >
+      | t = < OR >
+      )
+      op2 = third_priority()
+      {
+        logical.addChild(op2);
+        logical.addOperator(t.image);
+      }
+    )*
+  )
+  {
+    print("expression end");
+    dec();
+    return t == null ? op1 : logical;
+  }
+}
+
+AbstractTreeNode third_priority() :
+{
+  AbstractTreeNode operand1 = null, operand2 = null;
+  ComparatorNode node = new ComparatorNode();
+  Token t = null;
+}
+{
+  {
+    inc();
+    print("third_priority start");
+  }
+  (
+    operand1 = second_priority()
+    (
+      t = < Compare > operand2 = second_priority()
+      {
+        node.addChild(operand1);
+        node.addChild(operand2);
+        node.setOperator(t.image);
+      }
+    )?
+  )
+  {
+    print("third_priority end");
+    dec();
+    return t == null ? operand1 : node;
+  }
+}
+
+AbstractTreeNode second_priority() :
+{
+  AbstractTreeNode value = null, value2 = null;
+  SecondPriorityNode math = new SecondPriorityNode();
+  Token operator = null;
+}
+{
+  {
+    inc();
+    print("second priority start");
+  }
+  (
+    value = first_priority()
+    {
+      math.addChild(value);
+    }
+    (
+      (
+        operator = < PLUS >
+      | operator = < MINUS >
+      )
+      value2 = first_priority()
+      {
+        math.addOperator(operator.image);
+        math.addChild(value2);
+      }
+    )*
+  )
+  {
+    print("second priority end");
+    dec();
+    return operator == null ? value : math;
+  }
+}
+
+AbstractTreeNode first_priority() :
+{
+  FirstPriorityNode math = new FirstPriorityNode();
+  AbstractTreeNode value1 = null, value2 = null;
+  Token operator = null;
+}
+{
+  {
+    inc();
+    print("first priority start");
+  }
+  (
+    value1 = zero_priority()
+    {
+      math.addChild(value1);
+    }
+    (
+      (
+        operator = < Mulp >
+      | operator = < DIV >
+      )
+      value2 = zero_priority()
+      {
+        math.addOperator(operator.image);
+        math.addChild(value2);
+      }
+    )*
+  )
+  {
+    print("first priority end");
+    dec();
+    return operator == null ? value1 : math;
+  }
+}
+
+DeclarationNode declarationStmt() :
+{
+  Token type = null, varName = null;
+  DeclarationNode out = new DeclarationNode();
+  AbstractTreeNode value = null;
+}
+{
+  {
+    inc();
+    print("start Declaration");
+  }
+  (
+    (
+    type = < Id >)
+    {
+      out.setType(type.image);
+    }
+    (
+      varName = < Id >
+      (
+        < Assignment > value = expression()
+      )?
+    )
+    {
+      out.addVar(varName.image, value);
+    }
+    (
+      < COMA > 
+      varName = < Id >
+      (
+        < Assignment > value = expression()
+      )?
+      {
+        out.addVar(varName.image, value);
+        value = null; //set value to null to prevent pass value to the next variable
+      }
+    )*
+  )
+  {
+    print("end Declaration");
+    dec();
+    return out;
+  }
+}

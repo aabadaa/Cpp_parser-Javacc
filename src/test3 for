@@ -1,0 +1,37 @@
+
+//normal for with if statements
+int i,j;
+for(i=10; i>5;i -=1){
+	for(int j=1; j<=2 ;j= j+1){
+		if(i>8)
+			cout<<"i>8"<<endl;
+		else if(i>6){
+			cout<<"i>6"<<endl;
+		}
+		else
+			cout<<"i<6"<<endl;
+	}
+}
+// infinite loop
+i = 0;
+char c= 'c';
+for( ; ; ){
+	 i = i*10+5;
+	 if (i>5 && c == 'c')
+	  	 break;
+}
+
+
+for(int k =0,h=8 ; ;k +=1,h -=1 ){
+	 if(k==4 || h==4){
+		cout<<"the value of k and h is "<<k<<"  "<<h<<endl;
+	  	continue;
+	 }
+	 
+	 if(k>10)
+	 	break;
+	   
+}
+
+
+

@@ -1,0 +1,20 @@
+/*while and do while*/
+
+
+string s= "compiler";
+double i=5*2-5/2,d=5.5;
+while(true){
+	i = i*d;
+	if(i>20)
+		break;
+
+}
+
+int n=0;
+do{
+	n = n +2;
+	if( n == 4)
+		continue;
+	cout<<"the value of n is "<<n<<endl;
+
+}while(n<10);
